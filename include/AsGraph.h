@@ -7,12 +7,40 @@
 #include <vector>
 #include "AS.h"
 #include <string>
+#include <unordered_set>
 
 class AsGraph
 {
 private:
     std::unordered_map<int, std::unique_ptr<AS>> asMap;
     std::unordered_map<int, std::vector<std::pair<int, int>>> adjacencyList;
+
+    bool hasCycle_helper(int src, int relationship, std::unordered_set<int> &visited, std::unordered_set<int> &safe)
+    {
+        if (safe.find(src) != safe.end())
+        {
+            return false;
+        }
+        if (visited.find(src) != visited.end())
+        {
+            return true;
+        }
+
+        visited.insert(src);
+        for (const auto &nei : adjacencyList[src])
+        {
+            int neiNode = nei.first;
+            int neiRelationship = nei.second;
+            if (neiRelationship == relationship && hasCycle_helper(neiNode, relationship, visited, safe))
+            {
+                return true;
+            }
+        }
+        visited.erase(src);
+
+        safe.insert(src);
+        return false;
+    }
 
 public:
     AsGraph() {}
@@ -27,8 +55,30 @@ public:
         return asMap;
     }
 
-    const auto getAdjacencyList() const
+    const auto &getAdjacencyList() const
     {
         return adjacencyList;
+    }
+
+    bool hasCycle(int relationship)
+    {
+        std::unordered_set<int> visited;
+        std::unordered_set<int> safe;
+        for (const auto &pair : adjacencyList)
+        {
+            int src = pair.first;
+            if (hasCycle_helper(src, relationship, visited, safe))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool NodeHasCycle(int src, int relationship)
+    {
+        std::unordered_set<int> visited;
+        std::unordered_set<int> safe;
+        return hasCycle_helper(src, relationship, visited, safe);
     }
 };
