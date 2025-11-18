@@ -60,25 +60,7 @@ public:
         return adjacencyList;
     }
 
-    bool hasCycle(int relationship)
-    {
-        std::unordered_set<int> visited;
-        std::unordered_set<int> safe;
-        for (const auto &pair : adjacencyList)
-        {
-            int src = pair.first;
-            if (hasCycle_helper(src, relationship, visited, safe))
-            {
-                return true;
-            }
-        }
-        return false;
-    }
+    bool hasCycle(int relationship);
 
-    bool NodeHasCycle(int src, int relationship)
-    {
-        std::unordered_set<int> visited;
-        std::unordered_set<int> safe;
-        return hasCycle_helper(src, relationship, visited, safe);
-    }
+    bool NodeHasCycle(int src, int relationship);
 };

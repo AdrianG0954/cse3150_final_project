@@ -19,6 +19,28 @@ std::vector<std::string> AsGraph::split(const std::string &s, const char delimet
     return res;
 }
 
+bool AsGraph::hasCycle(int relationship)
+{
+    std::unordered_set<int> visited;
+    std::unordered_set<int> safe;
+    for (const auto &pair : adjacencyList)
+    {
+        int src = pair.first;
+        if (hasCycle_helper(src, relationship, visited, safe))
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+bool AsGraph::NodeHasCycle(int src, int relationship)
+{
+    std::unordered_set<int> visited;
+    std::unordered_set<int> safe;
+    return hasCycle_helper(src, relationship, visited, safe);
+}
+
 void AsGraph::buildGraph(const std::string &fileName)
 {
     std::ifstream input;
@@ -66,7 +88,7 @@ void AsGraph::buildGraph(const std::string &fileName)
             asMap[srcAsn] = std::make_unique<AS>(srcAsn);
         }
         if (asMap.find(dstAsn) == asMap.end())
-        {   
+        {
             asMap[dstAsn] = std::make_unique<AS>(dstAsn);
         }
 
@@ -76,7 +98,11 @@ void AsGraph::buildGraph(const std::string &fileName)
         // keeping track of each nodes relationships
         if (relType == 0)
         {
+            // bidirectional for peers
+            adjacencyList[dstAsn].emplace_back(srcAsn, relType);
+
             asMap[srcAsn]->addPeer(dstAsn);
+            asMap[dstAsn]->addPeer(srcAsn);
         }
         else if (relType == 1)
         {
