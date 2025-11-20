@@ -15,7 +15,7 @@ private:
     std::unordered_map<int, std::unique_ptr<AS>> asMap;
     std::unordered_map<int, std::vector<std::pair<int, int>>> adjacencyList;
 
-    bool hasCycle_helper(int src, int relationship, std::unordered_set<int> &visited, std::unordered_set<int> &safe)
+    bool hasCycle_helper(int src, std::unordered_set<int> &visited, std::unordered_set<int> &safe)
     {
         if (safe.find(src) != safe.end())
         {
@@ -31,7 +31,8 @@ private:
         {
             int neiNode = nei.first;
             int neiRelationship = nei.second;
-            if (neiRelationship == relationship && hasCycle_helper(neiNode, relationship, visited, safe))
+            // we don't follow peer-to-peer edges as they are bidirectional
+            if (neiRelationship != 0 && hasCycle_helper(neiNode, visited, safe))
             {
                 return true;
             }
@@ -49,18 +50,21 @@ public:
 
     void buildGraph(const std::string &fileName);
 
-    // must return ref to avoid copying the map
+    // return ref to avoid copying (plus we have to since unique_ptrs)
     const auto &getAsMap() const
     {
         return asMap;
     }
 
+    // return ref to avoid copying
     const auto &getAdjacencyList() const
     {
         return adjacencyList;
     }
 
-    bool hasCycle(int relationship);
+    // check for cycles in the graph (p->c relationships)
+    bool hasCycle();
 
-    bool NodeHasCycle(int src, int relationship);
+    // check an individual node for cycles
+    bool NodeHasCycle(int src);
 };

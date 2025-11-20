@@ -19,14 +19,14 @@ std::vector<std::string> AsGraph::split(const std::string &s, const char delimet
     return res;
 }
 
-bool AsGraph::hasCycle(int relationship)
+bool AsGraph::hasCycle()
 {
     std::unordered_set<int> visited;
     std::unordered_set<int> safe;
     for (const auto &pair : adjacencyList)
     {
         int src = pair.first;
-        if (hasCycle_helper(src, relationship, visited, safe))
+        if (hasCycle_helper(src, visited, safe))
         {
             return true;
         }
@@ -34,11 +34,11 @@ bool AsGraph::hasCycle(int relationship)
     return false;
 }
 
-bool AsGraph::NodeHasCycle(int src, int relationship)
+bool AsGraph::NodeHasCycle(int src)
 {
     std::unordered_set<int> visited;
     std::unordered_set<int> safe;
-    return hasCycle_helper(src, relationship, visited, safe);
+    return hasCycle_helper(src, visited, safe);
 }
 
 void AsGraph::buildGraph(const std::string &fileName)
@@ -52,15 +52,6 @@ void AsGraph::buildGraph(const std::string &fileName)
         return;
     }
 
-    /*
-        0 - peer-to-peer
-        1 - provider-to-customer
-        -1 - customer-to-provider
-
-        1|11537|0|bgp = AS1 and AS11537 are peers
-        1|21616|-1|bgp = AS1 is a customer of AS21616
-        1|34732|-1|bgp = AS1 is a customer of AS34732
-    */
     std::string line;
     while (std::getline(input, line))
     {
@@ -95,7 +86,6 @@ void AsGraph::buildGraph(const std::string &fileName)
         // we use emplace to directly create the pair in the vector
         adjacencyList[srcAsn].emplace_back(dstAsn, relType);
 
-        // keeping track of each nodes relationships
         if (relType == 0)
         {
             // bidirectional for peers
@@ -106,11 +96,15 @@ void AsGraph::buildGraph(const std::string &fileName)
         }
         else if (relType == 1)
         {
-            asMap[srcAsn]->addProvider(dstAsn);
+            // 1 = provider-to-customer
+            asMap[srcAsn]->addCustomer(dstAsn);
+            asMap[dstAsn]->addProvider(srcAsn);
         }
         else if (relType == -1)
         {
-            asMap[srcAsn]->addCustomer(dstAsn);
+            // -1 = customer-to-provider
+            asMap[srcAsn]->addProvider(dstAsn);
+            asMap[dstAsn]->addCustomer(srcAsn);
         }
     }
 }

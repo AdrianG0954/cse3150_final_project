@@ -39,5 +39,10 @@ int main()
         }
         cout << std::endl;
     }
+
+    // Check for cycles in provider-to-customer relationships (1)
+    bool hasCycle = graph.hasCycle();
+    cout << "\nGraph has provider-to-customer cycle: " << (hasCycle ? "Yes" : "No") << std::endl;
+
     return 0;
 }

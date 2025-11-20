@@ -17,7 +17,7 @@ public:
         this->asn = asn;
     }
 
-    int getAsn()
+    int getAsn() const
     {
         return this->asn;
     }
@@ -37,17 +37,17 @@ public:
         this->peers.push_back(peerAsn);
     }
 
-    const std::vector<int>& getProviders() const
+    const std::vector<int> &getProviders() const
     {
         return providers;
     }
 
-    const std::vector<int>& getCustomers() const
+    const std::vector<int> &getCustomers() const
     {
         return customers;
     }
 
-    const std::vector<int>& getPeers() const
+    const std::vector<int> &getPeers() const
     {
         return peers;
     }
