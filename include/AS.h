@@ -3,6 +3,9 @@
 #include <vector>
 #include <memory>
 
+#include "Policy.h"
+#include "BGP.h"
+
 class AS
 {
 private:
@@ -10,11 +13,13 @@ private:
     std::vector<int> providers;
     std::vector<int> customers;
     std::vector<int> peers;
+    BGP policy;
 
 public:
     AS(int asn)
     {
         this->asn = asn;
+        this->policy = BGP();
     }
 
     int getAsn() const
@@ -50,5 +55,15 @@ public:
     const std::vector<int> &getPeers() const
     {
         return peers;
+    }
+
+    BGP &getPolicy()
+    {
+        return policy;
+    }
+
+    const BGP &getPolicy() const
+    {
+        return policy;
     }
 };

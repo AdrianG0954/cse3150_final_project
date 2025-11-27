@@ -9,13 +9,16 @@
 #include <string>
 #include <unordered_set>
 
+using std::string, std::vector, std::unordered_map, std::pair, std::unique_ptr, std::unordered_set;
+
 class AsGraph
 {
 private:
-    std::unordered_map<int, std::unique_ptr<AS>> asMap;
-    std::unordered_map<int, std::vector<std::pair<int, int>>> adjacencyList;
+    unordered_map<int, unique_ptr<AS>> asMap;
+    unordered_map<int, vector<pair<int, int>>> adjacencyList;
+    vector<vector<int>> flattenedGraph;
 
-    bool hasCycle_helper(int src, std::unordered_set<int> &visited, std::unordered_set<int> &safe)
+    bool hasCycle_helper(int src, unordered_set<int> &visited, unordered_set<int> &safe)
     {
         if (safe.find(src) != safe.end())
         {
@@ -46,9 +49,9 @@ private:
 public:
     AsGraph() {}
 
-    std::vector<std::string> split(const std::string &s, const char delimeter);
+    vector<string> split(const string &s, const char delimiter);
 
-    void buildGraph(const std::string &fileName);
+    void buildGraph(const string &fileName);
 
     // return ref to avoid copying (plus we have to since unique_ptrs)
     const auto &getAsMap() const
@@ -67,4 +70,21 @@ public:
 
     // check an individual node for cycles
     bool NodeHasCycle(int src);
+
+    // flatten graph into propagation ranks
+    void flattenGraph();
+
+    const auto &getFlattenedGraph() const
+    {
+        return flattenedGraph;
+    }
+
+    // process announcements for nodes
+    void processAnnouncements(const string &filename);
+
+    void propagateUp();
+
+    void propagateAcross();
+
+    void propagateDown();
 };
