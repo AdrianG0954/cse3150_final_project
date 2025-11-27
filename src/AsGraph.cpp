@@ -254,9 +254,9 @@ void AsGraph::propagateAcross()
 void AsGraph::propagateDown()
 {
     /*
-    for all ASNs in rank 0
+    for all ASNs in rank n
 
-    - iterate through their providers (if any)
+    - iterate through their customers (if any)
     - send announcements to their providers
 
     we do this for each rank iteratively
