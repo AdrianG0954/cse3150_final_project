@@ -3,23 +3,26 @@
 #include <vector>
 #include <memory>
 
-using std::string;
+using std::string, std::vector;
 
 class Announcement
 {
 private:
-    std::string prefix;       // the IP prefix being announced
-    std::vector<int> asPath;  // path the announcement has taken up to the current point (pre-pendeded)
-    int nextHopAsn;           // the AS that sent this announcement to us
-    std::string relationship; // the relationship of the AS that sent the announcement
-
+    string prefix;       // the IP prefix being announced
+    vector<int> asPath;  // path the announcement has taken up to the current point (pre-pendeded)
+    int nextHopAsn;      // the AS that sent this announcement to us
+    string relationship; // the relationship of the AS that sent the announcement
+    bool rovInvalid;     // whether the announcement failed ROV checks
 public:
-    Announcement(const std::string &prefix, const std::vector<int> &asPath, int nextHopAsn, const std::string &relationship)
+    Announcement() = default;
+
+    Announcement(const string &prefix, const vector<int> &asPath, int nextHopAsn, const string &relationship, bool rovInvalid = false)
     {
         this->prefix = prefix;
         this->asPath = asPath;
         this->nextHopAsn = nextHopAsn;
         this->relationship = relationship;
+        this->rovInvalid = rovInvalid;
     }
 
     const string &getPrefix() const
@@ -35,5 +38,25 @@ public:
     const vector<int> &getAsPath() const
     {
         return this->asPath;
+    }
+
+    const void setAsPath(const vector<int> &newAsPath)
+    {
+        this->asPath = newAsPath;
+    }
+
+    const string &getRelationship() const
+    {
+        return this->relationship;
+    }
+
+    int getNextHopAsn() const
+    {
+        return this->nextHopAsn;
+    }
+
+    bool isRovInvalid() const
+    {
+        return this->rovInvalid;
     }
 };

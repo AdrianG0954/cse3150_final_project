@@ -17,6 +17,7 @@ private:
     unordered_map<int, unique_ptr<AS>> asMap;
     unordered_map<int, vector<pair<int, int>>> adjacencyList;
     vector<vector<int>> flattenedGraph;
+    unordered_set<int> rovEnabledAsns; // ASNs that deploy ROV
 
     bool hasCycle_helper(int src, unordered_set<int> &visited, unordered_set<int> &safe)
     {
@@ -79,8 +80,11 @@ public:
         return flattenedGraph;
     }
 
+    // load ROV deployment file (ASNs that use ROV)
+    void loadROVDeployment(const string &filename);
+
     // process announcements for nodes
-    void processAnnouncements(const string &filename);
+    void processInitialAnnouncements(const string &filename);
 
     void propagateUp();
 

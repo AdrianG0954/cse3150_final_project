@@ -29,6 +29,29 @@ bool AsGraph::NodeHasCycle(int src)
     return hasCycle_helper(src, visited, safe);
 }
 
+void AsGraph::loadROVDeployment(const std::string &filename)
+{
+    std::ifstream file(filename);
+    if (!file.is_open())
+    {
+        std::cerr << "ROV deployment file not found: " << filename << std::endl;
+        return;
+    }
+
+    std::string line;
+    while (std::getline(file, line))
+    {
+        if (!line.empty())
+        {
+            int asn = std::stoi(line);
+            rovEnabledAsns.insert(asn);
+        }
+    }
+    file.close();
+    
+    std::cout << "Loaded " << rovEnabledAsns.size() << " ROV-enabled ASes" << std::endl;
+}
+
 void AsGraph::buildGraph(const std::string &fileName)
 {
     std::ifstream input;
@@ -47,7 +70,7 @@ void AsGraph::buildGraph(const std::string &fileName)
         {
             continue;
         }
-        std::vector<std::string> tokens = split(line, '|');
+        std::vector<std::string> tokens = Utils::split(line, '|');
 
         /*
         ex line: 51823|198047|0|mlp:
@@ -64,11 +87,13 @@ void AsGraph::buildGraph(const std::string &fileName)
         // Create AS nodes for future quick access
         if (asMap.find(srcAsn) == asMap.end())
         {
-            asMap[srcAsn] = std::make_unique<AS>(srcAsn);
+            bool useROV = (rovEnabledAsns.find(srcAsn) != rovEnabledAsns.end());
+            asMap[srcAsn] = std::make_unique<AS>(srcAsn, useROV);
         }
         if (asMap.find(dstAsn) == asMap.end())
         {
-            asMap[dstAsn] = std::make_unique<AS>(dstAsn);
+            bool useROV = (rovEnabledAsns.find(dstAsn) != rovEnabledAsns.end());
+            asMap[dstAsn] = std::make_unique<AS>(dstAsn, useROV);
         }
 
         // we use emplace to directly create the pair in the vector
@@ -138,7 +163,7 @@ void AsGraph::flattenGraph()
     }
 }
 
-void AsGraph::processAnnouncements(const std::string &filename)
+void AsGraph::processInitialAnnouncements(const std::string &filename)
 {
     std::ifstream file(filename);
     if (!file.is_open())
@@ -148,26 +173,33 @@ void AsGraph::processAnnouncements(const std::string &filename)
     }
 
     std::string line;
+    vector<int> seededAsns;
     while (getline(file, line))
     {
         vector<string> res = Utils::split(line, ',');
 
         int asn = std::stoi(res[0]); // seed_asn
         string prefix = res[1];      // nodes prefix
-        bool rovInvalid = (res.size() > 2) ? (res[2] == "False") : false;
+        bool rovInvalid = (res[2] == "True") ? true : false;
 
         // enqueue the announcement
         if (asMap.find(asn) == asMap.end())
         {
             cerr << "ASN: " << asn << " not found." << endl;
         }
+        seededAsns.push_back(asn);
         AS *as = asMap[asn].get();
-        Announcement a(prefix, {asn}, asn, "origin");
+        Announcement a(prefix, {asn}, asn, "origin", rovInvalid);
 
         // enqueue announcement to AS policy
-        BGP &bgpPolicy = as->getPolicy();
-        bgpPolicy.enqueueAnnouncement(a);
-        bgpPolicy.processAnnouncements();
+        Policy &policy = as->getPolicy();
+        policy.enqueueAnnouncement(a);
+    }
+
+    for (int asn : seededAsns)
+    {
+        AS *as = asMap[asn].get();
+        as->getPolicy().processAnnouncements();
     }
 }
 
@@ -187,7 +219,7 @@ void AsGraph::propagateUp()
         {
             // gather information from original node
             AS *as = asMap[cAsn].get();
-            BGP &policy = as->getPolicy();
+            Policy &policy = as->getPolicy();
             const auto &rib = policy.getlocalRib();
 
             // send original nodes announcements to providers
@@ -200,17 +232,24 @@ void AsGraph::propagateUp()
                 {
                     const Announcement &currAnn = p.second;
 
-                    // update announcement
-                    vector<int> newAsnPath = currAnn.getAsPath();
-                    newAsnPath.insert(newAsnPath.begin(), as->getAsn());
                     Announcement toSend(
                         currAnn.getPrefix(),
-                        newAsnPath,
+                        currAnn.getAsPath(),
                         cAsn,
                         "customer");
 
                     providerAs->getPolicy().enqueueAnnouncement(toSend);
                 }
+            }
+        }
+
+        // before moving, process next rank's announcements
+        if (currRank + 1 < flattenedGraph.size())
+        {
+            for (int asn : flattenedGraph[currRank + 1])
+            {
+                AS *as = asMap[asn].get();
+                as->getPolicy().processAnnouncements();
             }
         }
     }
@@ -225,7 +264,7 @@ void AsGraph::propagateAcross()
     for (const auto &pair : asMap)
     {
         AS *as = pair.second.get();
-        BGP &policy = as->getPolicy();
+        Policy &policy = as->getPolicy();
         const auto &rib = policy.getlocalRib();
         for (int peerAsn : as->getPeers())
         {
@@ -236,18 +275,22 @@ void AsGraph::propagateAcross()
             {
                 const Announcement &currAnn = p.second;
 
-                // update announcement
-                vector<int> newAsnPath = currAnn.getAsPath();
-                newAsnPath.insert(newAsnPath.begin(), as->getAsn());
                 Announcement toSend(
                     currAnn.getPrefix(),
-                    newAsnPath,
+                    currAnn.getAsPath(),
                     as->getAsn(),
                     "peer");
 
                 peerAs->getPolicy().enqueueAnnouncement(toSend);
             }
         }
+    }
+
+    // after all enqueuing, process all announcements
+    for (const auto &pair : asMap)
+    {
+        AS *as = pair.second.get();
+        as->getPolicy().processAnnouncements();
     }
 }
 
@@ -267,7 +310,7 @@ void AsGraph::propagateDown()
         {
             // gather information from original node
             AS *as = asMap[asn].get();
-            BGP &policy = as->getPolicy();
+            Policy &policy = as->getPolicy();
             const auto &rib = policy.getlocalRib();
 
             // send original nodes announcements to customers
@@ -280,17 +323,24 @@ void AsGraph::propagateDown()
                 {
                     const Announcement &currAnn = p.second;
 
-                    // update announcement
-                    vector<int> newAsnPath = currAnn.getAsPath();
-                    newAsnPath.insert(newAsnPath.begin(), asn);
                     Announcement toSend(
                         currAnn.getPrefix(),
-                        newAsnPath,
+                        currAnn.getAsPath(),
                         asn,
                         "provider");
 
                     customerAs->getPolicy().enqueueAnnouncement(toSend);
                 }
+            }
+        }
+
+        // before moving, process next rank's announcements
+        if (currRank - 1 >= 0)
+        {
+            for (int asn : flattenedGraph[currRank - 1])
+            {
+                AS *as = asMap[asn].get();
+                as->getPolicy().processAnnouncements();
             }
         }
     }

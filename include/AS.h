@@ -5,6 +5,7 @@
 
 #include "Policy.h"
 #include "BGP.h"
+#include "ROV.h"
 
 class AS
 {
@@ -13,13 +14,19 @@ private:
     std::vector<int> providers;
     std::vector<int> customers;
     std::vector<int> peers;
-    BGP policy;
+    std::unique_ptr<Policy> policy;
 
 public:
-    AS(int asn)
+    AS(int asn, bool useROV = false) : asn(asn)
     {
-        this->asn = asn;
-        this->policy = BGP();
+        if (useROV)
+        {
+            policy = std::make_unique<ROV>(asn);
+        }
+        else
+        {
+            policy = std::make_unique<BGP>(asn);
+        }
     }
 
     int getAsn() const
@@ -57,13 +64,13 @@ public:
         return peers;
     }
 
-    BGP &getPolicy()
+    Policy &getPolicy()
     {
-        return policy;
+        return *policy;
     }
 
-    const BGP &getPolicy() const
+    const Policy &getPolicy() const
     {
-        return policy;
+        return *policy;
     }
 };

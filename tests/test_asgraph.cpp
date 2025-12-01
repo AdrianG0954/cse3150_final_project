@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include "AsGraph.h"
+#include "Utils.h"
 #include <fstream>
 #include <sstream>
 #include <filesystem>
@@ -66,20 +67,20 @@ protected:
 // Test split function
 TEST_F(AsGraphTest, SplitFunction)
 {
-    std::vector<std::string> result = graph->split("a|b|c", '|');
+    std::vector<std::string> result = Utils::split("a|b|c", '|');
     EXPECT_EQ(3, result.size());
     EXPECT_EQ("a", result[0]);
     EXPECT_EQ("b", result[1]);
     EXPECT_EQ("c", result[2]);
 
-    result = graph->split("", '|');
+    result = Utils::split("", '|');
     EXPECT_EQ(0, result.size());
 
-    result = graph->split("single", '|');
+    result = Utils::split("single", '|');
     EXPECT_EQ(1, result.size());
     EXPECT_EQ("single", result[0]);
 
-    result = graph->split("a|b|", '|');
+    result = Utils::split("a|b|", '|');
     EXPECT_EQ(2, result.size());
     EXPECT_EQ("a", result[0]);
     EXPECT_EQ("b", result[1]);

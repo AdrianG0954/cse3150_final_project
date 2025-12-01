@@ -2,10 +2,9 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <unordered_map>
 
 #include "Announcement.h"
-
-using std::string;
 
 class Policy
 {
@@ -15,5 +14,7 @@ public:
 
     virtual void enqueueAnnouncement(const Announcement &announcement) = 0;
 
-    virtual void clearAnnouncements() = 0;
+    virtual void processAnnouncements() = 0;
+
+    virtual const std::unordered_map<std::string, Announcement> &getlocalRib() const = 0;
 };

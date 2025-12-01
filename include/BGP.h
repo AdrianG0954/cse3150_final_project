@@ -7,21 +7,34 @@
 #include "Announcement.h"
 #include "Policy.h"
 
-using std::string, std::unordered_map;
+using std::string, std::unordered_map, std::queue;
 
 class BGP : public Policy
 {
-private:
-    std::unordered_map<std::string, Announcement> localRib; // routing information table
-    std::queue<Announcement> receivedAnnouncements;         // contains all received announcements to be processed
+protected:
+    int ownerAsn;
+    unordered_map<std::string, Announcement> localRib; // routing information table
+    queue<Announcement> receivedAnnouncements;         // contains all received announcements to be processed
+
 public:
-    BGP() = default;
+    BGP(int asn)
+    {
+        this->ownerAsn = asn;
+    }
+
+    const int getOwnerAsn() const
+    {
+        return ownerAsn;
+    }
 
     void enqueueAnnouncement(const Announcement &announcement) override;
 
-    void processAnnouncements();
+    void processAnnouncements() override;
 
-    void clearAnnouncements() override;
+    const unordered_map<string, Announcement> &getlocalRib() const override
+    {
+        return localRib;
+    }
 
-    const unordered_map<string, Announcement> &getlocalRib() const;
+    Announcement resolveAnnouncement(const Announcement &curr);
 };
