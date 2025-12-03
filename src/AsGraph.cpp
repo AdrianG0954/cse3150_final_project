@@ -52,8 +52,6 @@ int AsGraph::loadROVDeployment(const string &filename)
     }
     file.close();
 
-    cout << "Loaded " << rovEnabledAsns.size() << " ROV-enabled ASes" << endl;
-
     return 0;
 }
 
@@ -123,54 +121,106 @@ int AsGraph::buildGraph(const string &fileName)
 
 void AsGraph::flattenGraph()
 {
-    vector<int> ex;
-    unordered_set<int> alreadyRanked;
+    // vector<int> ex;
+    // for (const auto &pair : asMap)
+    // {
+    //     int asId = pair.first;
+    //     AS *as = pair.second.get();
+    //     if (as->getCustomers().empty())
+    //     {
+    //         ex.push_back(asId);
+    //     }
+    // }
+    // flattenedGraph.push_back(ex);
+
+    // for (size_t i = 0; i < flattenedGraph.size(); ++i)
+    // {
+    //     const vector<int> &prevRank = flattenedGraph[i];
+    //     vector<int> currRank;
+
+    //     for (int asId : prevRank)
+    //     {
+    //         AS *as = asMap[asId].get();
+    //         for (int pId : as->getProviders())
+    //         {
+    //             currRank.push_back(pId);
+    //         }
+    //     }
+
+    //     if (!currRank.empty())
+    //     {
+    //         flattenedGraph.push_back(currRank);
+    //     }
+    // }
+    // int prev = 0;
+    // while (prev < flattenedGraph.size())
+    // {
+    //     const vector<int> &prevRank = flattenedGraph[prev];
+    //     unordered_set<int> currRankSet;
+
+    //     for (int asId : prevRank)
+    //     {
+    //         AS *as = asMap[asId].get();
+    //         for (int pId : as->getProviders())
+    //         {
+    //             currRankSet.insert(pId);
+    //         }
+    //     }
+
+    //     if (!currRankSet.empty())
+    //     {
+    //         flattenedGraph.push_back(vector<int>(currRankSet.begin(), currRankSet.end()));
+    //     }
+    //     prev++;
+    // }
+
+    unordered_map<int, int> rankMap;
+    for (const auto &pair : asMap)
+    {
+        rankMap[pair.first] = -1;
+    }
+
+    vector<int> q;
     for (const auto &pair : asMap)
     {
         int asId = pair.first;
         AS *as = pair.second.get();
         if (as->getCustomers().empty())
         {
-            ex.push_back(asId);
-            alreadyRanked.insert(asId);
+            rankMap[asId] = 0;
+            q.push_back(asId);
         }
     }
-    flattenedGraph.push_back(ex);
 
     /*
-    we iterate through the prevRanks IDs, and for each ID with providers
-    we add them and repeat the process
+    process queue
     */
-    int prev = 0;
-    while (prev < flattenedGraph.size())
+    int maxRank = 0;
+    for (size_t i = 0; i < q.size(); ++i)
     {
-        const vector<int> &prevRank = flattenedGraph[prev];
-        unordered_set<int> currRankSet;
+        int currAsn = q[i];
+        AS *as = asMap[currAsn].get();
+        int newRank = rankMap[currAsn] + 1;
+        if (newRank > maxRank)
+            maxRank = newRank;
 
-        for (int asId : prevRank)
+        for (int pAsn : as->getProviders())
         {
-            AS *as = asMap[asId].get();
-            for (int pId : as->getProviders())
+            if (rankMap[pAsn] < newRank)
             {
-                if (alreadyRanked.find(pId) != alreadyRanked.end())
-                {
-                    continue;
-                }
-                currRankSet.insert(pId);
+                rankMap[pAsn] = newRank;
+                q.push_back(pAsn);
             }
         }
+    }
 
-        if (!currRankSet.empty())
-        {
-            flattenedGraph.push_back(vector<int>(currRankSet.begin(), currRankSet.end()));
-
-            // mark the ASes as ranked
-            for (int asn : currRankSet)
-            {
-                alreadyRanked.insert(asn);
-            }
-        }
-        prev++;
+    flattenedGraph.resize(maxRank + 1);
+    for (const auto &pair : rankMap)
+    {
+        int asn = pair.first;
+        int rank = pair.second;
+        if (rank >= 0)
+            flattenedGraph[rank].push_back(asn);
     }
 }
 
@@ -195,7 +245,13 @@ void AsGraph::processInitialAnnouncements(const string &filename)
 
         int asn = stoi(res[0]); // seed_asn
         string prefix = res[1]; // nodes prefix
-        bool rovInvalid = (res[2] == "True") ? true : false;
+
+        string rovStr = res[2];
+        if (!rovStr.empty() && rovStr.back() == '\r')
+        {
+            rovStr.pop_back();
+        }
+        bool rovInvalid = (rovStr == "True") ? true : false;
 
         // enqueue the announcement
         if (asMap.find(asn) == asMap.end())
@@ -203,20 +259,22 @@ void AsGraph::processInitialAnnouncements(const string &filename)
             cerr << "ASN: " << asn << " not found." << endl;
             continue;
         }
-        seededAsns.push_back(asn);
         AS *as = asMap[asn].get();
-        Announcement a(prefix, {}, asn, "origin", rovInvalid);
+        // Announcement ann(prefix, {}, asn, "origin", rovInvalid);
+        Announcement a(prefix, {asn}, asn, "origin", rovInvalid);
 
         // enqueue announcement to AS policy
         Policy &policy = as->getPolicy();
-        policy.enqueueAnnouncement(a);
+        // policy.enqueueAnnouncement(a);
+        policy.addOrigin(a);
     }
+    file.close();
 
-    for (int asn : seededAsns)
-    {
-        AS *as = asMap[asn].get();
-        as->getPolicy().processAnnouncements();
-    }
+    // for (int asn : seededAsns)
+    // {
+    //     AS *as = asMap[asn].get();
+    //     as->getPolicy().processAnnouncements();
+    // }
 }
 
 void AsGraph::propagateUp()
@@ -247,6 +305,13 @@ void AsGraph::propagateUp()
                 for (const auto &ann : rib)
                 {
                     const Announcement &currAnn = ann.second;
+
+                    // valley-free routing?
+                    const string &rel = currAnn.getRelationship();
+                    if (rel != "customer" && rel != "origin")
+                    {
+                        continue;
+                    }
 
                     Announcement toSend(
                         currAnn.getPrefix(),
@@ -291,6 +356,13 @@ void AsGraph::propagateAcross()
             {
                 const Announcement &currAnn = p.second;
 
+                // valley-free routing?
+                const string &rel = currAnn.getRelationship();
+                if (rel != "customer" && rel != "origin")
+                {
+                    continue;
+                }
+
                 Announcement toSend(
                     currAnn.getPrefix(),
                     currAnn.getAsPath(),
@@ -323,7 +395,15 @@ void AsGraph::propagateDown()
     */
     for (int currRank = flattenedGraph.size() - 1; currRank >= 0; --currRank)
     {
-        // First, send announcements from current rank to their customers
+
+        // process announcwements for current rank first
+        for (int asn : flattenedGraph[currRank])
+        {
+            AS *as = asMap[asn].get();
+            as->getPolicy().processAnnouncements();
+        }
+
+        // Then, send announcements from current rank to their customers
         for (int asn : flattenedGraph[currRank])
         {
             // gather information from original node
@@ -353,14 +433,24 @@ void AsGraph::propagateDown()
             }
         }
 
-        // Then, process the received announcements for the customers (next lower rank)
-        if (currRank - 1 >= 0)
+        // // Then, process the received announcements for the customers (next lower rank)
+        // if (currRank - 1 >= 0)
+        // {
+        //     for (int asn : flattenedGraph[currRank - 1])
+        //     {
+        //         AS *as = asMap[asn].get();
+        //         as->getPolicy().processAnnouncements();
+        //     }
+        // }
+    }
+
+    // process announcements for current rank
+    if (!flattenedGraph.empty())
+    {
+        for (int asn : flattenedGraph[0])
         {
-            for (int asn : flattenedGraph[currRank - 1])
-            {
-                AS *as = asMap[asn].get();
-                as->getPolicy().processAnnouncements();
-            }
+            AS *as = asMap[asn].get();
+            as->getPolicy().processAnnouncements();
         }
     }
 }

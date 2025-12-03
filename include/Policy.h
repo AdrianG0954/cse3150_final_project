@@ -12,9 +12,11 @@ private:
 public:
     virtual ~Policy() = default;
 
-    virtual void enqueueAnnouncement(const Announcement &announcement) = 0;
+    virtual void enqueueAnnouncement(const Announcement &a) = 0;
 
     virtual void processAnnouncements() = 0;
+
+    virtual void addOrigin(const Announcement &a) = 0;
 
     virtual const std::unordered_map<std::string, Announcement> &getlocalRib() const = 0;
 };

@@ -14,12 +14,28 @@ class ROV : public BGP
 public:
     ROV(int asn) : BGP(asn) {}
 
-    void enqueueAnnouncement(const Announcement &announcement) override
+    void enqueueAnnouncement(const Announcement &a) override
     {
-        BGP::enqueueAnnouncement(announcement);
+        if (a.isRovInvalid())
+        {
+            return;
+        }
+        BGP::enqueueAnnouncement(a);
     }
 
-    void processAnnouncements() override;
+    void processAnnouncements() override
+    {
+        BGP::processAnnouncements();
+    }
+
+    void addOrigin(const Announcement &a) override
+    {
+        if (a.isRovInvalid())
+        {
+            return;
+        }
+        BGP::addOrigin(a);
+    }
 
     const unordered_map<string, Announcement> &getlocalRib() const override
     {

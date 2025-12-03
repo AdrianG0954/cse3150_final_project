@@ -27,7 +27,7 @@ public:
         return ownerAsn;
     }
 
-    void enqueueAnnouncement(const Announcement &announcement) override;
+    void enqueueAnnouncement(const Announcement &a) override;
 
     void processAnnouncements() override;
 
@@ -37,4 +37,11 @@ public:
     }
 
     Announcement resolveAnnouncement(const Announcement &curr);
+
+    Announcement *chooseBest(Announcement *a1, Announcement *a2);
+
+    void addOrigin(const Announcement &a) override
+    {
+        localRib[a.getPrefix()] = a;
+    }
 };
