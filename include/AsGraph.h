@@ -14,10 +14,10 @@ using std::string, std::vector, std::unordered_map, std::pair, std::unique_ptr, 
 class AsGraph
 {
 private:
-    unordered_map<int, unique_ptr<AS>> asMap;
-    unordered_map<int, vector<pair<int, int>>> adjacencyList;
-    vector<vector<int>> flattenedGraph;
-    unordered_set<int> rovEnabledAsns; // ASNs that deploy ROV
+    unordered_map<int, unique_ptr<AS>> asMap;                 // mapping of ASN to AS node
+    unordered_map<int, vector<pair<int, int>>> adjacencyList; // asn -> list of (neighbor_asn, relationship_type)
+    vector<vector<int>> flattenedGraph;                       // ranks of ASNs for propagation
+    unordered_set<int> rovEnabledAsns;                        // ASNs that deploy ROV
 
     bool hasCycle_helper(int src, unordered_set<int> &visited, unordered_set<int> &safe)
     {
@@ -52,7 +52,7 @@ public:
 
     vector<string> split(const string &s, const char delimiter);
 
-    void buildGraph(const string &fileName);
+    int buildGraph(const string &fileName);
 
     // return ref to avoid copying (plus we have to since unique_ptrs)
     const auto &getAsMap() const
@@ -81,7 +81,7 @@ public:
     }
 
     // load ROV deployment file (ASNs that use ROV)
-    void loadROVDeployment(const string &filename);
+    int loadROVDeployment(const string &filename);
 
     // process announcements for nodes
     void processInitialAnnouncements(const string &filename);

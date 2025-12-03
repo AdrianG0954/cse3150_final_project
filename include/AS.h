@@ -7,25 +7,27 @@
 #include "BGP.h"
 #include "ROV.h"
 
+using std::string, std::vector, std::unique_ptr, std::make_unique;
+
 class AS
 {
 private:
     int asn;
-    std::vector<int> providers;
-    std::vector<int> customers;
-    std::vector<int> peers;
-    std::unique_ptr<Policy> policy;
+    vector<int> providers;
+    vector<int> customers;
+    vector<int> peers;
+    unique_ptr<Policy> policy;
 
 public:
     AS(int asn, bool useROV = false) : asn(asn)
     {
         if (useROV)
         {
-            policy = std::make_unique<ROV>(asn);
+            policy = make_unique<ROV>(asn);
         }
         else
         {
-            policy = std::make_unique<BGP>(asn);
+            policy = make_unique<BGP>(asn);
         }
     }
 
@@ -49,17 +51,17 @@ public:
         this->peers.push_back(peerAsn);
     }
 
-    const std::vector<int> &getProviders() const
+    const vector<int> &getProviders() const
     {
         return providers;
     }
 
-    const std::vector<int> &getCustomers() const
+    const vector<int> &getCustomers() const
     {
         return customers;
     }
 
-    const std::vector<int> &getPeers() const
+    const vector<int> &getPeers() const
     {
         return peers;
     }

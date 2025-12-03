@@ -89,7 +89,7 @@ TEST_F(BGPTest, RelationshipPrefixAdded)
     const auto &rib = bgp->getlocalRib();
     const Announcement &stored = rib.at("192.168.1.0/24");
     
-    EXPECT_EQ("received_from_customer", stored.getRelationship());
+    EXPECT_EQ("customer", stored.getRelationship());
 }
 
 // ==================== CONFLICT RESOLUTION - RELATIONSHIP PRIORITY ====================
@@ -110,7 +110,7 @@ TEST_F(BGPTest, ConflictResolution_CustomerBeatsProvider)
     ASSERT_EQ(1, rib.size());
     
     const Announcement &stored = rib.at("192.168.1.0/24");
-    EXPECT_EQ("received_from_customer", stored.getRelationship());
+    EXPECT_EQ("customer", stored.getRelationship());
     EXPECT_EQ(300, stored.getNextHopAsn());
 }
 
@@ -128,7 +128,7 @@ TEST_F(BGPTest, ConflictResolution_PeerBeatsProvider)
     
     const auto &rib = bgp->getlocalRib();
     const Announcement &stored = rib.at("192.168.1.0/24");
-    EXPECT_EQ("received_from_peer", stored.getRelationship());
+    EXPECT_EQ("peer", stored.getRelationship());
 }
 
 TEST_F(BGPTest, ConflictResolution_OriginBeatsAll)
@@ -145,7 +145,7 @@ TEST_F(BGPTest, ConflictResolution_OriginBeatsAll)
     
     const auto &rib = bgp->getlocalRib();
     const Announcement &stored = rib.at("192.168.1.0/24");
-    EXPECT_EQ("received_from_origin", stored.getRelationship());
+    EXPECT_EQ("origin", stored.getRelationship());
 }
 
 TEST_F(BGPTest, ConflictResolution_ProviderDoesNotBeatCustomer)
@@ -162,7 +162,7 @@ TEST_F(BGPTest, ConflictResolution_ProviderDoesNotBeatCustomer)
     
     const auto &rib = bgp->getlocalRib();
     const Announcement &stored = rib.at("192.168.1.0/24");
-    EXPECT_EQ("received_from_customer", stored.getRelationship());
+    EXPECT_EQ("customer", stored.getRelationship());
     EXPECT_EQ(200, stored.getNextHopAsn());
 }
 
@@ -291,22 +291,22 @@ TEST_F(BGPTest, ComplexConflictResolution_MultipleUpdates)
     // First: provider announcement
     bgp->enqueueAnnouncement(Announcement(prefix, {200}, 200, "provider"));
     bgp->processAnnouncements();
-    EXPECT_EQ("received_from_provider", bgp->getlocalRib().at(prefix).getRelationship());
+    EXPECT_EQ("provider", bgp->getlocalRib().at(prefix).getRelationship());
     
     // Second: peer announcement (should win - better relationship)
     bgp->enqueueAnnouncement(Announcement(prefix, {300, 400}, 300, "peer"));
     bgp->processAnnouncements();
-    EXPECT_EQ("received_from_peer", bgp->getlocalRib().at(prefix).getRelationship());
+    EXPECT_EQ("peer", bgp->getlocalRib().at(prefix).getRelationship());
     
     // Third: customer announcement (should win - best relationship)
     bgp->enqueueAnnouncement(Announcement(prefix, {500, 600, 700}, 500, "customer"));
     bgp->processAnnouncements();
-    EXPECT_EQ("received_from_customer", bgp->getlocalRib().at(prefix).getRelationship());
+    EXPECT_EQ("customer", bgp->getlocalRib().at(prefix).getRelationship());
     
     // Fourth: another peer announcement with shorter path (should lose - worse relationship)
     bgp->enqueueAnnouncement(Announcement(prefix, {800}, 800, "peer"));
     bgp->processAnnouncements();
-    EXPECT_EQ("received_from_customer", bgp->getlocalRib().at(prefix).getRelationship());
+    EXPECT_EQ("customer", bgp->getlocalRib().at(prefix).getRelationship());
     EXPECT_EQ(500, bgp->getlocalRib().at(prefix).getNextHopAsn());
 }
 
@@ -332,15 +332,15 @@ TEST_F(BGPTest, RealisticPropagationScenario)
     const Announcement &ann1 = rib.at("203.0.113.0/24");
     EXPECT_EQ(2, ann1.getAsPath().size()); // [100, 50]
     EXPECT_EQ(100, ann1.getAsPath()[0]);
-    EXPECT_EQ("received_from_customer", ann1.getRelationship());
+    EXPECT_EQ("customer", ann1.getRelationship());
     
     const Announcement &ann2 = rib.at("198.51.100.0/24");
     EXPECT_EQ(3, ann2.getAsPath().size()); // [100, 200, 250]
-    EXPECT_EQ("received_from_peer", ann2.getRelationship());
+    EXPECT_EQ("peer", ann2.getRelationship());
     
     const Announcement &ann3 = rib.at("192.0.2.0/24");
     EXPECT_EQ(4, ann3.getAsPath().size()); // [100, 1000, 2000, 3000]
-    EXPECT_EQ("received_from_provider", ann3.getRelationship());
+    EXPECT_EQ("provider", ann3.getRelationship());
 }
 
 // ==================== EDGE CASES ====================
@@ -363,7 +363,7 @@ TEST_F(BGPTest, SingleHopOriginAnnouncement)
     
     // Path should be [100, 100] (owner prepended to origin)
     EXPECT_EQ(2, stored.getAsPath().size());
-    EXPECT_EQ("received_from_origin", stored.getRelationship());
+    EXPECT_EQ("origin", stored.getRelationship());
 }
 
 TEST_F(BGPTest, IdenticalAnnouncementsTwice)

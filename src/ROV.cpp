@@ -2,11 +2,12 @@
 #include <vector>
 #include <unordered_map>
 #include <queue>
+#include <iostream>
 
 #include "ROV.h"
 #include "BGP.h"
 
-using std::string, std::vector, std::unordered_map, std::queue;
+using std::string, std::vector, std::unordered_map, std::queue, std::cout, std::endl;
 
 void ROV::processAnnouncements()
 {
@@ -27,6 +28,10 @@ void ROV::processAnnouncements()
         {
             Announcement toStore = resolveAnnouncement(curr);
             localRib[prefix] = toStore;
+        }
+        else
+        {
+            cout << "Dropping: " << prefix << " at AS " << this->ownerAsn << " due to ROV invalidity." << endl;
         }
         receivedAnnouncements.pop();
     }

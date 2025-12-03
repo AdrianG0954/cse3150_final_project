@@ -3,7 +3,7 @@
 #include <vector>
 #include <memory>
 
-using std::string, std::vector;
+using std::string, std::vector, std::ostream;
 
 class Announcement
 {

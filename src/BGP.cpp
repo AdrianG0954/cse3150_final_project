@@ -13,13 +13,13 @@ using std::string, std::vector, std::unordered_map;
 // Helper function to get priority of relationship
 static int getPriority(const string &rel)
 {
-    if (rel == "origin" || rel == "received_from_origin")
+    if (rel == "origin")
         return 4;
-    if (rel == "customer" || rel == "received_from_customer")
+    if (rel == "customer")
         return 3;
-    if (rel == "peer" || rel == "received_from_peer")
+    if (rel == "peer")
         return 2;
-    if (rel == "provider" || rel == "received_from_provider")
+    if (rel == "provider")
         return 1;
     return -1;
 }
@@ -87,5 +87,6 @@ Announcement BGP::resolveAnnouncement(const Announcement &newAnn)
         prefix,
         asPath,
         nextHopAsn,
-        "received_from_" + relationship);
+        relationship,
+        newAnn.isRovInvalid());  // Preserve ROV invalid flag
 }
