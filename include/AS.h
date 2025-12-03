@@ -17,7 +17,6 @@ private:
     vector<int> customers;
     vector<int> peers;
     unique_ptr<Policy> policy;
-
 public:
     AS(int asn, bool useROV = false) : asn(asn)
     {

@@ -7,9 +7,11 @@ using std::string, std::vector, std::ostringstream;
 
 vector<string> Utils::split(const string &s, const char delimiter)
 {
-    std::vector<std::string> res;
+    vector<string> res;
+    res.reserve(4); // Most lines have 4 tokens (src|dst|rel|data)
+
     size_t start = 0, posEnd = 0;
-    while ((posEnd = s.find(delimiter, start)) != std::string::npos)
+    while ((posEnd = s.find(delimiter, start)) != string::npos)
     {
         res.push_back(s.substr(start, posEnd - start));
         start = posEnd + 1;
@@ -39,5 +41,3 @@ string Utils::join(const vector<T> &input, const string &separator)
 
     return oss.str();
 }
-
-

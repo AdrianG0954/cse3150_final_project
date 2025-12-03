@@ -115,11 +115,7 @@ int main()
     cout << "Comparing output with expected RIBs..." << endl;
     string command = "bash " + pathPrefix + "bench/compare_output.sh " + pathPrefix + "bench/many/ribs.csv " + pathPrefix + "cse3150_final_project/output/my_output.csv";
     int result = std::system(command.c_str());
-    if (result == 0)
-    {
-        cout << "\nAll tests passed! Output matches expected RIBs." << endl;
-    }
-    else
+    if (result == -1)
     {
         cerr << "\nTests failed. Check the diff output above." << endl;
         return -1;

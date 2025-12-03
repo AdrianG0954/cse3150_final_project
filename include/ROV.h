@@ -22,6 +22,15 @@ public:
         }
         BGP::enqueueAnnouncement(a);
     }
+    
+    void enqueueAnnouncement(Announcement &&a)
+    {
+        if (a.isRovInvalid())
+        {
+            return;
+        }
+        BGP::enqueueAnnouncement(std::move(a));
+    }
 
     void processAnnouncements() override
     {

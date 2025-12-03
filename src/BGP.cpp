@@ -24,9 +24,15 @@ static int getPriority(const string &rel)
     return -1;
 }
 
+
 void BGP::enqueueAnnouncement(const Announcement &a)
 {
     receivedAnnouncements.push(a);
+}
+
+void BGP::enqueueAnnouncement(Announcement &&a)
+{
+    receivedAnnouncements.push(std::move(a));
 }
 
 void BGP::processAnnouncements()
@@ -38,36 +44,14 @@ void BGP::processAnnouncements()
     we should handle conflicts if they arise.
     */
     unordered_map<string, vector<Announcement>> candidatesByPrefix;
+    candidatesByPrefix.reserve(receivedAnnouncements.size());
+
     while (!receivedAnnouncements.empty())
     {
-        Announcement curr = receivedAnnouncements.front();
-        // string prefix = curr.getPrefix();
-        // vector<int> newAsPath = curr.getAsPath();
-        // newAsPath.insert(newAsPath.begin(), this->ownerAsn);
-        // curr.setAsPath(newAsPath);
+        const string &prefix = receivedAnnouncements.front().getPrefix();
+        candidatesByPrefix[prefix].push_back(std::move(receivedAnnouncements.front()));
         receivedAnnouncements.pop();
-
-        // loop prevention, skip if own ASN is already in AS path
-        // check before modifying AS path
-        bool hasLoop = false;
-        const vector<int> &currAsPath = curr.getAsPath();
-        for (size_t i = 0; i < currAsPath.size(); ++i)
-        {
-            if (currAsPath[i] == this->ownerAsn)
-            {
-                hasLoop = true;
-                break;
-            }
-        }
-        if (hasLoop)
-            continue;
-
-        candidatesByPrefix[curr.getPrefix()].push_back(curr);
     }
-    // Announcement toStore = resolveAnnouncement(curr);
-
-    // localRib[prefix] = toStore;
-    // receivedAnnouncements.pop();
 
     for (auto &pair : candidatesByPrefix)
     {
@@ -83,18 +67,20 @@ void BGP::processAnnouncements()
             bestNewAnn = chooseBest(bestNewAnn, &candidates[i]);
         }
 
-        if (localRib.find(prefix) != localRib.end())
+        // Check for existing announcement in localRib
+        auto it = localRib.find(prefix);
+        if (it != localRib.end())
         {
-            Announcement *winner = chooseBest(&localRib[prefix], bestNewAnn);
-            if (winner == &localRib[prefix])
+            Announcement *winner = chooseBest(&it->second, bestNewAnn);
+            // if the winner is the existing one, skip updating
+            if (winner == &it->second)
                 continue;
         }
 
-        Announcement stored = *bestNewAnn;
-        vector<int> newAsPath = stored.getAsPath();
+        // modify AS path after choosing best
+        vector<int> &newAsPath = bestNewAnn->getAsPath();
         newAsPath.insert(newAsPath.begin(), this->ownerAsn);
-        stored.setAsPath(newAsPath);
-        localRib[prefix] = stored;
+        localRib[prefix] = std::move(*bestNewAnn);
     }
 }
 

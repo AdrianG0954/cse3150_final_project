@@ -1,4 +1,5 @@
 #pragma once
+
 #include <string>
 #include <vector>
 #include <memory>
@@ -30,12 +31,21 @@ public:
         return prefix;
     }
 
-    void setNextHopAsn(int newNextHopAsn)
+    const string &getRelationship() const
     {
-        this->nextHopAsn = newNextHopAsn;
+        return this->relationship;
+    }
+    bool isRovInvalid() const
+    {
+        return this->rovInvalid;
     }
 
     const vector<int> &getAsPath() const
+    {
+        return this->asPath;
+    }
+
+    vector<int> &getAsPath()
     {
         return this->asPath;
     }
@@ -45,18 +55,13 @@ public:
         this->asPath = newAsPath;
     }
 
-    const string &getRelationship() const
-    {
-        return this->relationship;
-    }
-
     int getNextHopAsn() const
     {
         return this->nextHopAsn;
     }
 
-    bool isRovInvalid() const
+    void setNextHopAsn(int newNextHopAsn)
     {
-        return this->rovInvalid;
+        this->nextHopAsn = newNextHopAsn;
     }
 };

@@ -13,8 +13,8 @@ class BGP : public Policy
 {
 protected:
     int ownerAsn;
-    unordered_map<std::string, Announcement> localRib; // routing information table
-    queue<Announcement> receivedAnnouncements;         // contains all received announcements to be processed
+    unordered_map<string, Announcement> localRib; // routing information table
+    queue<Announcement> receivedAnnouncements;    // contains all received announcements to be processed
 
 public:
     BGP(int asn)
@@ -28,6 +28,7 @@ public:
     }
 
     void enqueueAnnouncement(const Announcement &a) override;
+    void enqueueAnnouncement(Announcement &&a);  
 
     void processAnnouncements() override;
 
