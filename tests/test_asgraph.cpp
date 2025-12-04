@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 #include "AsGraph.h"
 #include "Utils.h"
+#include "Relationships.h"
 #include <fstream>
 #include <sstream>
 #include <filesystem>
@@ -30,23 +31,23 @@ protected:
         // Simple test data
         std::ofstream simple("test_simple.txt");
         simple << "1|2|0|bgp\n";  // AS1 and AS2 are peers
-        simple << "2|3|1|bgp\n";  // AS2 is provider to AS3
-        simple << "3|4|-1|bgp\n"; // AS3 is customer of AS4
+        simple << "2|3|-1|bgp\n"; // AS2 is provider to AS3
+        simple << "4|3|-1|bgp\n"; // AS4 is provider to AS3
         simple.close();
 
         // Test data with cycle
         std::ofstream cycle("test_cycle.txt");
-        cycle << "1|2|1|bgp\n"; // AS1 provider to AS2
-        cycle << "2|3|1|bgp\n"; // AS2 provider to AS3
-        cycle << "3|1|1|bgp\n"; // AS3 provider to AS1 (creates cycle)
+        cycle << "1|2|-1|bgp\n"; // AS1 provider to AS2
+        cycle << "2|3|-1|bgp\n"; // AS2 provider to AS3
+        cycle << "3|1|-1|bgp\n"; // AS3 provider to AS1 (creates cycle)
         cycle.close();
 
         // Test data with peers
         std::ofstream peers("test_peers.txt");
         peers << "100|200|0|bgp\n";  // Peers
         peers << "200|300|0|bgp\n";  // Peers
-        peers << "300|400|1|bgp\n";  // Provider-customer
-        peers << "400|500|-1|bgp\n"; // Customer-provider
+        peers << "300|400|-1|bgp\n"; // Provider-customer (300 is provider, 400 is customer)
+        peers << "500|400|-1|bgp\n"; // Provider-customer (500 is provider, 400 is customer)
         peers.close();
 
         // Empty test file
@@ -130,7 +131,7 @@ TEST_F(AsGraphTest, ASRelationships)
 
     const AS *as3 = asMap.at(3).get();
     EXPECT_EQ(0, as3->getPeers().size());
-    EXPECT_EQ(2, as3->getProviders().size()); 
+    EXPECT_EQ(2, as3->getProviders().size());
     EXPECT_EQ(0, as3->getCustomers().size());
     EXPECT_TRUE(contains(as3->getProviders(), 2));
     EXPECT_TRUE(contains(as3->getProviders(), 4));
@@ -159,7 +160,7 @@ TEST_F(AsGraphTest, PeerRelationships)
 
     for (const auto &neighbor : as100_neighbors)
     {
-        if (neighbor.first == 200 && neighbor.second == 0)
+        if (neighbor.first == 200 && static_cast<int>(neighbor.second) == 0)
         {
             as100_has_as200_peer = true;
             break;
@@ -168,7 +169,7 @@ TEST_F(AsGraphTest, PeerRelationships)
 
     for (const auto &neighbor : as200_neighbors)
     {
-        if (neighbor.first == 100 && neighbor.second == 0)
+        if (neighbor.first == 100 && static_cast<int>(neighbor.second) == 0)
         {
             as200_has_as100_peer = true;
             break;
@@ -189,11 +190,11 @@ TEST_F(AsGraphTest, PeerRelationships)
 TEST_F(AsGraphTest, CycleDetection)
 {
     graph->buildGraph("test_simple.txt");
-    EXPECT_FALSE(graph->hasCycle()); 
+    EXPECT_FALSE(graph->hasCycle());
 
     AsGraph cycleGraph;
     cycleGraph.buildGraph("test_cycle.txt");
-    
+
     EXPECT_TRUE(cycleGraph.NodeHasCycle(1));
     EXPECT_TRUE(cycleGraph.NodeHasCycle(2));
     EXPECT_TRUE(cycleGraph.NodeHasCycle(3));

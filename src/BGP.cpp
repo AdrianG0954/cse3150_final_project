@@ -7,23 +7,9 @@
 #include "Utils.h"
 #include "BGP.h"
 #include "Announcement.h"
+#include "Relationships.h"
 
 using std::string, std::vector, std::unordered_map;
-
-// Helper function to get priority of relationship
-static int getPriority(const string &rel)
-{
-    if (rel == "origin")
-        return 4;
-    if (rel == "customer")
-        return 3;
-    if (rel == "peer")
-        return 2;
-    if (rel == "provider")
-        return 1;
-    return -1;
-}
-
 
 void BGP::enqueueAnnouncement(const Announcement &a)
 {
@@ -89,8 +75,8 @@ Announcement *BGP::chooseBest(Announcement *curr, Announcement *cand)
     if (curr == nullptr)
         return cand;
 
-    int currPriority = getPriority(curr->getRelationship());
-    int candPriority = getPriority(cand->getRelationship());
+    Relationship currPriority = curr->getRelationship();
+    Relationship candPriority = cand->getRelationship();
 
     if (candPriority > currPriority)
         return cand;

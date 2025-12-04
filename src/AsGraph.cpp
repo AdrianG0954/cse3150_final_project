@@ -1,14 +1,16 @@
 #include <iostream>
-#include "AsGraph.h"
 #include <fstream>
 #include <string>
 #include <memory>
 #include <thread>
+
+#include "AsGraph.h"
 #include "Utils.h"
+#include "Relationships.h"
 
 using std::cout, std::endl, std::cerr,
     std::string, std::vector, std::unique_ptr,
-    std::ifstream, std::pair, std::unordered_set,
+    std::ifstream, std::unordered_set,
     std::make_unique, std::thread;
 
 bool AsGraph::hasCycle()
@@ -87,7 +89,7 @@ int AsGraph::buildGraph(const string &fileName)
         */
         int srcAsn = stoi(tokens[0]);
         int dstAsn = stoi(tokens[1]);
-        int relType = stoi(tokens[2]);
+        RelationshipType relType = static_cast<RelationshipType>(stoi(tokens[2]));
 
         // Create AS nodes for future quick access
         if (asMap.find(srcAsn) == asMap.end())
@@ -105,14 +107,14 @@ int AsGraph::buildGraph(const string &fileName)
         // we use emplace to directly create the pair in the vector
         adjacencyList[srcAsn].emplace_back(dstAsn, relType);
 
-        if (relType == 0)
+        if (relType == RelationshipType::PEER_TO_PEER)
         {
             // 0 = peer-to-peer (bidirectional)
             adjacencyList[dstAsn].emplace_back(srcAsn, relType);
             asMap[srcAsn]->addPeer(dstAsn);
             asMap[dstAsn]->addPeer(srcAsn);
         }
-        else if (relType == -1)
+        else if (relType == RelationshipType::PROVIDER_TO_CUSTOMER)
         {
             // provider-to-customer
             asMap[srcAsn]->addCustomer(dstAsn);
@@ -213,17 +215,15 @@ void AsGraph::processInitialAnnouncements(const string &filename)
         }
         AS *as = asMap[asn].get();
         // Announcement ann(prefix, {}, asn, "origin", rovInvalid);
-        Announcement a(prefix, {asn}, asn, "origin", rovInvalid);
+        Announcement a(prefix, {asn}, asn, Relationship::ORIGIN, rovInvalid);
 
         // enqueue announcement to AS policy
         Policy &policy = as->getPolicy();
-        // policy.enqueueAnnouncement(a);
         policy.addOrigin(a);
     }
     file.close();
 }
 
-// Helper function to process announcements for a range of ASes
 void processAnnouncementRange(const vector<int> &asns, size_t start, size_t end,
                               unordered_map<int, unique_ptr<AS>> &asMap)
 {
@@ -267,7 +267,7 @@ void AsGraph::propagateUp()
                     // Reuse announcement object, only change relationship and nextHop
                     providerAs->getPolicy().enqueueAnnouncement(
                         Announcement(currAnn.getPrefix(), currAnn.getAsPath(),
-                                     cAsn, "customer", currAnn.isRovInvalid()));
+                                     cAsn, Relationship::CUSTOMER, currAnn.isRovInvalid()));
                 }
             }
         }
@@ -309,7 +309,7 @@ void AsGraph::propagateAcross()
 
                 peerAs->getPolicy().enqueueAnnouncement(
                     Announcement(currAnn.getPrefix(), currAnn.getAsPath(),
-                                 as->getAsn(), "peer", currAnn.isRovInvalid()));
+                                 as->getAsn(), Relationship::PEER, currAnn.isRovInvalid()));
             }
         }
     }
@@ -373,7 +373,7 @@ void AsGraph::propagateDown()
 
                     customerAs->getPolicy().enqueueAnnouncement(
                         Announcement(currAnn.getPrefix(), currAnn.getAsPath(),
-                                     asn, "provider", currAnn.isRovInvalid()));
+                                     asn, Relationship::PROVIDER, currAnn.isRovInvalid()));
                 }
             }
         }

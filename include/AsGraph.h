@@ -14,10 +14,10 @@ using std::string, std::vector, std::unordered_map, std::pair, std::unique_ptr, 
 class AsGraph
 {
 private:
-    unordered_map<int, unique_ptr<AS>> asMap;                 // mapping of ASN to AS node
-    unordered_map<int, vector<pair<int, int>>> adjacencyList; // asn -> list of (neighbor_asn, relationship_type)
-    vector<vector<int>> flattenedGraph;                       // ranks of ASNs for propagation
-    unordered_set<int> rovEnabledAsns;                        // ASNs that deploy ROV
+    unordered_map<int, unique_ptr<AS>> asMap;                              // mapping of ASN to AS node
+    unordered_map<int, vector<pair<int, RelationshipType>>> adjacencyList; // asn -> list of (neighbor_asn, relationship_type)
+    vector<vector<int>> flattenedGraph;                                    // ranks of ASNs for propagation
+    unordered_set<int> rovEnabledAsns;                                     // ASNs that deploy ROV
 
     bool hasCycle_helper(int src, unordered_set<int> &visited, unordered_set<int> &safe)
     {
@@ -34,9 +34,9 @@ private:
         for (const auto &nei : adjacencyList[src])
         {
             int neiNode = nei.first;
-            int neiRelationship = nei.second;
+            RelationshipType neiRelationship = nei.second;
             // we don't follow peer-to-peer edges as they are bidirectional
-            if (neiRelationship != 0 && hasCycle_helper(neiNode, visited, safe))
+            if (neiRelationship != RelationshipType::PEER_TO_PEER && hasCycle_helper(neiNode, visited, safe))
             {
                 return true;
             }
