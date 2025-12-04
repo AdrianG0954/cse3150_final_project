@@ -37,8 +37,6 @@ public:
         return localRib;
     }
 
-    Announcement resolveAnnouncement(const Announcement &curr);
-
     Announcement *chooseBest(Announcement *a1, Announcement *a2);
 
     void addOrigin(const Announcement &a) override

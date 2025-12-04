@@ -15,7 +15,6 @@ using std::cout, std::endl, std::cerr,
 
 bool AsGraph::hasCycle()
 {
-    // Checks for cycles in the graph using DFS
     unordered_set<int> visited;
     unordered_set<int> safe;
     for (const auto &pair : adjacencyList)
@@ -29,9 +28,8 @@ bool AsGraph::hasCycle()
     return false;
 }
 
-bool AsGraph::NodeHasCycle(int src)
+bool AsGraph::nodeHasCycle(int src)
 {
-    // Code to check individual node for cycles
     unordered_set<int> visited;
     unordered_set<int> safe;
     return hasCycle_helper(src, visited, safe);
@@ -126,11 +124,6 @@ int AsGraph::buildGraph(const string &fileName)
 
 void AsGraph::flattenGraph()
 {
-    /*
-    iterate through all nodes,
-    and for those without customers,
-    add them to rank 0 (index 0 in flattenedGraph)
-    */
     unordered_map<int, int> rankMap;
     vector<int> ranks;
     for (const auto &pair : asMap)
@@ -151,7 +144,6 @@ void AsGraph::flattenGraph()
     int rankSize = 1;
     for (size_t i = 0; i < ranks.size(); ++i)
     {
-        // get current AsNode and its rank
         int asn = ranks[i];
         AS *as = asMap[asn].get();
 
@@ -159,7 +151,6 @@ void AsGraph::flattenGraph()
         rankSize = std::max(rankSize, newRank);
         for (int pAsn : as->getProviders())
         {
-            // assign the new rank to the providers
             if (newRank > rankMap[pAsn])
             {
                 rankMap[pAsn] = newRank;
@@ -197,9 +188,8 @@ void AsGraph::processInitialAnnouncements(const string &filename)
     {
         vector<string> res = Utils::split(line, ',');
 
-        int asn = stoi(res[0]); // seed_asn
-        string prefix = res[1]; // nodes prefix
-
+        int asn = stoi(res[0]);
+        string prefix = res[1];
         string rovStr = res[2];
         if (!rovStr.empty() && rovStr.back() == '\r')
         {
@@ -207,17 +197,14 @@ void AsGraph::processInitialAnnouncements(const string &filename)
         }
         bool rovInvalid = (rovStr == "True") ? true : false;
 
-        // enqueue the announcement
         if (asMap.find(asn) == asMap.end())
         {
             cerr << "ASN: " << asn << " not found." << endl;
             continue;
         }
         AS *as = asMap[asn].get();
-        // Announcement ann(prefix, {}, asn, "origin", rovInvalid);
         Announcement a(prefix, {asn}, asn, Relationship::ORIGIN, rovInvalid);
 
-        // enqueue announcement to AS policy
         Policy &policy = as->getPolicy();
         policy.addOrigin(a);
     }
@@ -227,6 +214,12 @@ void AsGraph::processInitialAnnouncements(const string &filename)
 void processAnnouncementRange(const vector<int> &asns, size_t start, size_t end,
                               unordered_map<int, unique_ptr<AS>> &asMap)
 {
+    /*
+    This is the helper function each thread uses to process their half of the work.
+
+    It takes as arguments the list of rank ASNs, the start and end indices for their work
+    and and asMap for accessing the AS references.
+     */
     for (size_t i = start; i < end; ++i)
     {
         int asn = asns[i];
@@ -249,7 +242,6 @@ void AsGraph::propagateUp()
     {
         for (int cAsn : flattenedGraph[currRank])
         {
-            // gather information from original node
             AS *as = asMap[cAsn].get();
             Policy &policy = as->getPolicy();
             const auto &rib = policy.getlocalRib();
@@ -259,7 +251,6 @@ void AsGraph::propagateUp()
             {
                 AS *providerAs = asMap[pAsn].get();
 
-                // going through original nodes announcements
                 for (const auto &ann : rib)
                 {
                     const Announcement &currAnn = ann.second;
@@ -276,9 +267,8 @@ void AsGraph::propagateUp()
         if (currRank + 1 < flattenedGraph.size())
         {
             const vector<int> &nextRank = flattenedGraph[currRank + 1];
-            size_t midpoint = nextRank.size() / 2; // grab midpoint to evenly split work
+            size_t midpoint = nextRank.size() / 2;
 
-            // have both threads process half
             thread t1(processAnnouncementRange, std::cref(nextRank), 0, midpoint, std::ref(asMap));
             thread t2(processAnnouncementRange, std::cref(nextRank), midpoint, nextRank.size(), std::ref(asMap));
 
@@ -302,7 +292,6 @@ void AsGraph::propagateAcross()
         {
             AS *peerAs = asMap[peerAsn].get();
 
-            // going through original nodes announcements
             for (const auto &p : rib)
             {
                 const Announcement &currAnn = p.second;
@@ -343,7 +332,7 @@ void AsGraph::propagateDown()
     for (int currRank = flattenedGraph.size() - 1; currRank >= 0; --currRank)
     {
 
-        // process announcements for current rank first with 2 threads
+        // process announcements for current rank first
         const vector<int> &currRankAsns = flattenedGraph[currRank];
         size_t midpoint = currRankAsns.size() / 2;
 
@@ -366,7 +355,6 @@ void AsGraph::propagateDown()
             {
                 AS *customerAs = asMap[cAsn].get();
 
-                // going through original nodes announcements
                 for (const auto &p : rib)
                 {
                     const Announcement &currAnn = p.second;

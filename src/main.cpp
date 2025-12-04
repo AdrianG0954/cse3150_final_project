@@ -6,43 +6,36 @@
 #include <chrono>
 #include <sstream>
 #include <cstdlib>
+#include <filesystem>
 
 #include "AS.h"
 #include "AsGraph.h"
+
+namespace fs = std::filesystem;
 
 using std::cout, std::endl, std::string,
     std::vector, std::unordered_map, std::ostringstream,
     std::ofstream, std::cerr;
 
-string pathPrefix = "/Users/adriangarcia/Desktop/cse_uconn/cse_3150_submissions/project/";
-
-/*
-List of what needs to be done for main file:
-- Build AS graph from input file (using bench directory)
-    - Load ROV deployment file (rov_deployment.txt) and determine what ASes use ROV
-    - Display basic info about the graph (number of ASes, relationships)
-    - Check for cycles in provider-to-customer relationships
-- Process initial announcements
-- Propagate announcements up, across, and down the graph
-- Compare output with ribs in bench directory
-*/
-
-using std::cout, std::endl;
+string pathPrefix = fs::current_path().string() + "/../../";
+// current test running
+string test = "bench/many";
 
 int main()
 {
     auto overallStart = std::chrono::high_resolution_clock::now();
+
     // building the graph
     AsGraph graph;
 
-    int err = graph.loadROVDeployment(pathPrefix + "bench/many/rov_asns.csv");
+    int err = graph.loadROVDeployment(pathPrefix + test + "/rov_asns.csv");
     if (err != 0)
     {
         cout << "Error loading ROV deployment file." << endl;
         return -1;
     }
 
-    err = graph.buildGraph(pathPrefix + "bench/many/CAIDAASGraphCollector_2025.10.15.txt");
+    err = graph.buildGraph(pathPrefix + test + "/CAIDAASGraphCollector_2025.10.15.txt");
     if (err != 0)
     {
         cout << "Error building AS graph." << endl;
@@ -57,7 +50,7 @@ int main()
         return -1;
     }
 
-    graph.processInitialAnnouncements(pathPrefix + "bench/many/anns.csv");
+    graph.processInitialAnnouncements(pathPrefix + test + "/anns.csv");
 
     graph.propagateUp();
     graph.propagateAcross();
@@ -69,9 +62,16 @@ int main()
          << endl;
 
     // outputting info to my_output.csv
-    cout << "Outputting RIBs to outputs/my_output.csv..." << endl;
+    cout << "Outputting RIBs to output/my_output.csv..." << endl;
 
-    std::ofstream outfile(pathPrefix + "cse3150_final_project/output/my_output.csv");
+    // Create output directory if it doesn't exist
+    std::filesystem::path outputDir = std::filesystem::path(pathPrefix) / "output";
+    if (!std::filesystem::exists(outputDir))
+    {
+        std::filesystem::create_directories(outputDir);
+    }
+
+    std::ofstream outfile(pathPrefix + "output/my_output.csv");
     if (!outfile.is_open())
     {
         cerr << "Failed to open output file!" << endl;
@@ -113,7 +113,7 @@ int main()
 
     // run the comparison script
     cout << "Comparing output with expected RIBs..." << endl;
-    string command = "bash " + pathPrefix + "bench/compare_output.sh " + pathPrefix + "bench/many/ribs.csv " + pathPrefix + "cse3150_final_project/output/my_output.csv";
+    string command = "bash " + pathPrefix + "bench/compare_output.sh " + pathPrefix + test + "/ribs.csv " + pathPrefix + "output/my_output.csv";
     int result = std::system(command.c_str());
     if (result == -1)
     {

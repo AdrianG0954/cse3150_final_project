@@ -195,9 +195,9 @@ TEST_F(AsGraphTest, CycleDetection)
     AsGraph cycleGraph;
     cycleGraph.buildGraph("test_cycle.txt");
 
-    EXPECT_TRUE(cycleGraph.NodeHasCycle(1));
-    EXPECT_TRUE(cycleGraph.NodeHasCycle(2));
-    EXPECT_TRUE(cycleGraph.NodeHasCycle(3));
+    EXPECT_TRUE(cycleGraph.nodeHasCycle(1));
+    EXPECT_TRUE(cycleGraph.nodeHasCycle(2));
+    EXPECT_TRUE(cycleGraph.nodeHasCycle(3));
 }
 
 // Test empty graph

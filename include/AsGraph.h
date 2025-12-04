@@ -5,9 +5,10 @@
 #include <unordered_map>
 #include <memory>
 #include <vector>
-#include "AS.h"
 #include <string>
 #include <unordered_set>
+
+#include "AS.h"
 
 using std::string, std::vector, std::unordered_map, std::pair, std::unique_ptr, std::unordered_set;
 
@@ -50,45 +51,48 @@ private:
 public:
     AsGraph() {}
 
-    vector<string> split(const string &s, const char delimiter);
-
+    /*
+    Code that reads caida data and builds the AS graph.
+    Returns 0 on success, -1 on failure.
+     */
     int buildGraph(const string &fileName);
 
-    // return ref to avoid copying (plus we have to since unique_ptrs)
     const auto &getAsMap() const
     {
         return asMap;
     }
 
-    // return ref to avoid copying
     const auto &getAdjacencyList() const
     {
         return adjacencyList;
     }
-
-    // check for cycles in the graph (p->c relationships)
-    bool hasCycle();
-
-    // check an individual node for cycles
-    bool NodeHasCycle(int src);
-
-    // flatten graph into propagation ranks
-    void flattenGraph();
 
     const auto &getFlattenedGraph() const
     {
         return flattenedGraph;
     }
 
-    // load ROV deployment file (ASNs that use ROV)
+    // check for cycles in the graph (p->c relationships)
+    bool hasCycle();
+
+    // check individual nodes for cycles
+    bool nodeHasCycle(int src);
+
+    // flatten graph into propagation ranks
+    void flattenGraph();
+
+    // stores ASNs that are within rov_asns.csv
     int loadROVDeployment(const string &filename);
 
-    // process announcements for nodes
+    // processes announcements for nodes from anns.csv
     void processInitialAnnouncements(const string &filename);
 
+    // propagates customers announcements to providers
     void propagateUp();
 
+    // propagates peer-to-peer announcements
     void propagateAcross();
 
+    // propagates provider announcements to customers
     void propagateDown();
 };

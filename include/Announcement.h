@@ -37,6 +37,7 @@ public:
     {
         return this->relationship;
     }
+
     bool isRovInvalid() const
     {
         return this->rovInvalid;

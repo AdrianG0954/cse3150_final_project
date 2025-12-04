@@ -18,42 +18,45 @@ void BGP::enqueueAnnouncement(const Announcement &a)
 
 void BGP::enqueueAnnouncement(Announcement &&a)
 {
+    // use move to avoid copying
     receivedAnnouncements.push(std::move(a));
 }
 
 void BGP::processAnnouncements()
 {
     /*
-    we loop through all received announcements in the queue
-    and create an announcement for them and store it in the localRib
+    we first pop all received announcements in the queue
+    and store them as candidates for each prefix
 
-    we should handle conflicts if they arise.
+    for each prefix, we choose the best announcement among the candidates
+    and compare it with the existing announcement in localRib (if any)
+
+    the overall winnder is stored in localRib
     */
-    unordered_map<string, vector<Announcement>> candidatesByPrefix;
-    candidatesByPrefix.reserve(receivedAnnouncements.size());
+    unordered_map<string, vector<Announcement>> candidates;
+    candidates.reserve(receivedAnnouncements.size());
 
     while (!receivedAnnouncements.empty())
     {
         const string &prefix = receivedAnnouncements.front().getPrefix();
-        candidatesByPrefix[prefix].push_back(std::move(receivedAnnouncements.front()));
+        candidates[prefix].push_back(std::move(receivedAnnouncements.front()));
         receivedAnnouncements.pop();
     }
 
-    for (auto &pair : candidatesByPrefix)
+    for (auto &pair : candidates)
     {
         const string &prefix = pair.first;
-        vector<Announcement> &candidates = pair.second;
+        vector<Announcement> &currCandidates = pair.second;
 
-        if (candidates.empty())
+        if (currCandidates.empty())
             continue;
 
-        Announcement *bestNewAnn = &candidates[0];
-        for (size_t i = 1; i < candidates.size(); ++i)
+        Announcement *bestNewAnn = &currCandidates[0];
+        for (size_t i = 1; i < currCandidates.size(); ++i)
         {
-            bestNewAnn = chooseBest(bestNewAnn, &candidates[i]);
+            bestNewAnn = chooseBest(bestNewAnn, &currCandidates[i]);
         }
 
-        // Check for existing announcement in localRib
         auto it = localRib.find(prefix);
         if (it != localRib.end())
         {
